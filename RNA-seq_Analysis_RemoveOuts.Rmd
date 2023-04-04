@@ -284,13 +284,7 @@ generate_NE_hm <- function(heatmap_df){
   
   col_colors <- list(Differentiation = c(NE = "#E9A3C9",
                                          `Non-NE` = "#F7F7F7",
-                                         `N/A`="#A1D76A"),
-                     Group = c(`Naphthalene (200mg/kg) + 1X HIV-PGK-Cre` = "#27B34B",
-                               `Naphthalene (200mg/kg) + 1X FIV-CMV-Cre` = "#F8766D",
-                               `NT + 1X Ad-CMV-Cre` = "#6F94CD",
-                               `NT + 1X HIV-PGK-Cre` = "#984EA3",
-                               `NT + 1X FIV-CMV-Cre` = "#FF7F00",
-                               `Naphthalene (200mg/kg) + 1X Ad-CMV-Cre` = "#FFFF33"))
+                                         `N/A`="#A1D76A"))
     
   hm <- pheatmap(as.matrix(heatmap_df[sample_names]), 
                  color = colorRampPalette(brewer.pal(8, "Oranges"))(255),
@@ -355,13 +349,7 @@ generate_custom_hm <- function(heatmap_df){
                                 `Myc-family` = "#FF7F00",
                                 Metastasis="#984EA3",
                                 NE = "#E9A3C9",
-                                `Non-NE` = "#F7F7F7"),
-                     Group = c(`Naphthalene (200mg/kg) + 1X HIV-PGK-Cre` = "#E41A1C",
-                               `NT + 1X Ad-CMV-Cre` = "#377EB8",
-                               `Naphthalene (200mg/kg) + 1X FIV-CMV-Cre` = "#4DAF4A",
-                               `NT + 1X HIV-PGK-Cre` = "#984EA3",
-                               `NT + 1X FIV-CMV-Cre` = "#FF7F00",
-                               `Naphthalene (200mg/kg) + 1X Ad-CMV-Cre` = "#FFFF33"))
+                                `Non-NE` = "#F7F7F7"))
     
   hm <- pheatmap(as.matrix(heatmap_df[sample_names]), 
                  color = colorRampPalette(brewer.pal(8, "Oranges"))(255),
@@ -464,20 +452,12 @@ generate_DE_hm <- function(heatmap_df){
   rownames(annot_col_df) <- annot_col_df$names
   annot_col_df <- annot_col_df %>% dplyr::select("Group")
   
-  col_colors <- list(Group = c(`Naphthalene (200mg/kg) + 1X HIV-PGK-Cre` = "#E41A1C",
-                               `NT + 1X Ad-CMV-Cre` = "#377EB8",
-                               `Naphthalene (200mg/kg) + 1X FIV-CMV-Cre` = "#4DAF4A",
-                               `NT + 1X HIV-PGK-Cre` = "#984EA3",
-                               `NT + 1X FIV-CMV-Cre` = "#FF7F00",
-                               `Naphthalene (200mg/kg) + 1X Ad-CMV-Cre` = "#FFFF33"))
-  
   de_hm <- pheatmap(heatmap_df[sample_names], 
                  color = colorRampPalette(brewer.pal(8, "Oranges"))(255),
                  cluster_rows = TRUE, 
                  show_rownames=TRUE, 
                  cluster_cols = TRUE, 
                  annotation_col = annot_col_df, 
-                 # annotation_colors = col_colors,
                  scale = "none")
   
   de_hm
