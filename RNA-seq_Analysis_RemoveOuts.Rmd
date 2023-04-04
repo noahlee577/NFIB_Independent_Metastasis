@@ -1,0 +1,555 @@
+---
+title: "RNA-seq_Analysis"
+output: html_document
+---
+# Will import sf file from Salmon alignment and convert transcript names to gene names
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+if (!requireNamespace("BiocManager", quietly = TRUE))
+  install.packages("BiocManager")
+
+# BiocManager::install("biomaRt")
+# BiocManager::install("tximeta")
+
+library(tidyverse)
+library(stringr)
+library(biomaRt)
+suppressPackageStartupMessages(library(SummarizedExperiment))
+library(tximeta)
+library(ggrepel)
+library(openxlsx)
+library(ggpubr)
+library(DESeq2)
+library(pheatmap)
+library(RColorBrewer)
+library(viridis)
+library(reshape2)
+```
+
+
+
+## Open the quant.sf file and normalize using tximport
+
+```{r read quant file and convert txmeta}
+
+sample_names <- c("1373-liver", "1373-lung", "1394-liver", "1394-lung", "1398-liver", "1398-lung", "1399-liver", "1399-lung", "1548-lung", "6843-liver", "6843-lung", "6844-liver", "6844-lung", "997-lung")
+
+#sample_names_dir <- paste0("./Results/", sample_names, ".csv")
+sample_names_dir <- paste0("./quants/", sample_names, "_quant/quant.sf")
+
+names(sample_names_dir) <- sample_names
+
+sample_names_df <- data.frame(files=sample_names_dir, names=sample_names)
+
+txi.salmon <- tximeta(sample_names_df, cleanDuplicateTxps = TRUE)
+
+df <- summarizeToGene(txi.salmon, countsFromAbundance="scaledTPM")
+
+
+```
+
+
+## Examine the RNA-seq dataset
+
+```{r examine SummarizedExperiment output}
+df
+colData(df)
+assayNames(df)
+rowRanges(df)
+rowData(df)
+seqinfo(df)
+
+
+metadf <- read.xlsx("Supp Table X - Cell Lines Generated.xlsx", startRow = 3) %>% 
+  dplyr::rename(names = Name) %>% 
+  mutate(Group = paste0(Genetic.Background, " + ", Virus, " + ", Site))
+
+colData(df) <- merge(colData(df), metadf)
+colData(df)  
+
+rownames(colData(df)) <- colData(df)$names
+
+assay(df, "abundance")[1:10,1:5]
+
+assay_data <- as.data.frame(assay(df, "abundance"))
+assay_data$gene_id <- rownames(assay_data)
+
+final <- right_join(as.data.frame(rowData(df)[c("gene_id", "gene_name")]), assay_data)
+
+write.csv(final, "combined_RNA_TPM_export_removed_Outs.csv", row.names = FALSE)
+
+```
+
+
+## Try DEseq2
+
+```{r DESeq2}
+
+DESeq_df <- DESeqDataSet(df, design = ~Group)
+
+DESeq_df
+
+# Pre-filter low count genes
+DESeq_df.cleaned <- DESeq_df[rowSums(counts(DESeq_df)) >= 10,]
+
+DESeq_df.cleaned$Group <- relevel(DESeq_df.cleaned$Group, ref = "TKO;Nfib+/+ + Ad-CMV-Cre + Lung")
+
+dds <- DESeq(DESeq_df.cleaned)
+resultsNames(dds)
+
+results(dds)
+
+# Compare NFIB-fl/fl Liver met v. Primary
+res <- results(dds, contrast=c("Group", "TKO;Nfib-fl/fl + Ad-CMV-Cre + Liver", "TKO;Nfib-fl/fl + Ad-CMV-Cre + Lung"))
+resOrdered <- res[order(res$padj),]
+
+resOrdered
+
+plotMA(res)
+
+resOrdered_withGene <- resOrdered
+
+resOrdered_withGene$gene_id <- rownames(resOrdered_withGene)
+
+resOrdered_withGene <- as.data.frame(resOrdered_withGene) %>% 
+  left_join(final %>% dplyr::select(c("gene_id", "gene_name")))
+
+write.xlsx(resOrdered_withGene, "NFIB-fl Met v Primary.xlsx")
+
+
+# Compare NFIB-wt Liver met v. Primary
+res <- results(dds, contrast=c("Group", "TKO;Nfib+/+ + Ad-CMV-Cre + Liver", "TKO;Nfib+/+ + Ad-CMV-Cre + Lung"))
+resOrdered <- res[order(res$padj),]
+
+resOrdered
+
+plotMA(res)
+
+resOrdered_withGene <- resOrdered
+
+resOrdered_withGene$gene_id <- rownames(resOrdered_withGene)
+
+resOrdered_withGene <- as.data.frame(resOrdered_withGene) %>% 
+  left_join(final %>% dplyr::select(c("gene_id", "gene_name")))
+
+write.xlsx(resOrdered_withGene, "NFIB-wt Met v Primary.xlsx")
+
+
+# Compare NFIB-fl Liver met v. Nfib-wt Liver met
+res <- results(dds, contrast=c("Group", "TKO;Nfib-fl/fl + Ad-CMV-Cre + Liver", "TKO;Nfib+/+ + Ad-CMV-Cre + Liver"))
+resOrdered <- res[order(res$padj),]
+
+resOrdered
+
+plotMA(res)
+
+resOrdered_withGene <- resOrdered
+
+resOrdered_withGene$gene_id <- rownames(resOrdered_withGene)
+
+resOrdered_withGene <- as.data.frame(resOrdered_withGene) %>% 
+  left_join(final %>% dplyr::select(c("gene_id", "gene_name")))
+
+write.xlsx(resOrdered_withGene, "NFIB-fl Met v Nfib-wt Met.xlsx")
+
+
+# Compare NFIB-fl Primary v. NFIB-wt Primary
+res <- results(dds, contrast=c("Group", "TKO;Nfib-fl/fl + Ad-CMV-Cre + Lung", "TKO;Nfib+/+ + Ad-CMV-Cre + Lung"))
+resOrdered <- res[order(res$padj),]
+
+resOrdered
+
+plotMA(res)
+
+resOrdered_withGene <- resOrdered
+
+resOrdered_withGene$gene_id <- rownames(resOrdered_withGene)
+
+resOrdered_withGene <- as.data.frame(resOrdered_withGene) %>% 
+  left_join(final %>% dplyr::select(c("gene_id", "gene_name")))
+
+write.xlsx(resOrdered_withGene, "NFIB-fl Primary v NFIB-wt Primary.xlsx")
+
+
+# Compare NFIB-wt cGRP-Cre Liver met v. Primary
+res <- results(dds, contrast=c("Group", "TKO + Ad-cGRP-Cre + Liver", "TKO + Ad-cGRP-Cre + Lung"))
+resOrdered <- res[order(res$padj),]
+
+resOrdered
+
+plotMA(res)
+
+resOrdered_withGene <- resOrdered
+
+resOrdered_withGene$gene_id <- rownames(resOrdered_withGene)
+
+resOrdered_withGene <- as.data.frame(resOrdered_withGene) %>% 
+  left_join(final %>% dplyr::select(c("gene_id", "gene_name")))
+
+write.xlsx(resOrdered_withGene, "cGRP-Cre Met v Primary.xlsx")
+
+
+
+# 
+# DESeq_df.cleaned$names <- relevel(DESeq_df.cleaned$names, ref = c("4482862-1R", "4482862-2R"))
+# 
+# plotMA(res)
+# 
+# resLFC <- lfcShrink(dds, coef="Group_Naphthalene..200mg.kg....1X.HIV.PGK.Cre_vs_NT...1X.Ad.CMV.Cre", type="apeglm")
+# resLFC
+# 
+# plotMA(resLFC, ylim=c(-2,2))
+# 
+# select_heatmap <- order(rowMeans(counts(dds,normalized=TRUE)),
+#                 decreasing=TRUE)[1:20]
+# df_heatmap <- as.data.frame(colData(dds)[,c("Group")])
+# pheatmap(assay(dds)[select_heatmap,], cluster_rows=TRUE, show_rownames=FALSE,
+#          cluster_cols=TRUE, annotation_col=df_heatmap)
+
+normalized_DESeq_df <- rlog(dds)
+
+head(assay(normalized_DESeq_df))
+
+## Calculate sample distances
+sampleDists <- dist(t(assay(normalized_DESeq_df)))
+
+sampleDistMatrix <- as.matrix(sampleDists)
+rownames(sampleDistMatrix) <- normalized_DESeq_df$Group
+colnames(sampleDistMatrix) <- NULL
+colors <- colorRampPalette( rev(brewer.pal(9, "Blues")) )(255)
+cluster_heatmap <- pheatmap(sampleDistMatrix,
+         clustering_distance_rows=sampleDists,
+         clustering_distance_cols=sampleDists,
+         col=colors)
+
+cluster_heatmap
+
+ggsave("RNA-seq cluster heatmap_less.pdf", plot = cluster_heatmap, height = 4, width = 8)
+ggsave("RNA-seq cluster heatmap_less.png", plot = cluster_heatmap, height = 4, width = 8, dpi = 600)
+
+```
+
+
+
+
+## PCA plot across the different samples
+
+```{r plot pca}
+
+pca <- prcomp(t(assay(normalized_DESeq_df)))
+
+summary(pca)
+
+pca_plot_data <- data.frame('Name' = rownames(pca$x), pca$x[,1:3]) 
+
+metadf <- read.xlsx("Supp Table X - Cell Lines Generated.xlsx", startRow = 3)
+
+pca_plot_data <- left_join(pca_plot_data, metadf) %>% 
+  mutate(Group = paste0(Genetic.Background, " + ", Virus, " + ", Site))
+
+percentVar <- round(100 * summary(pca)$importance[2,], digits = 1)
+
+base_pca <- ggplot(pca_plot_data) + 
+  geom_text_repel(aes(x = PC1, y = PC2, label = Name), size = rel(4)) +
+  geom_point(aes(x = PC1, y = PC2, color = Group)) +
+  theme_pubr() +
+  theme(axis.title.x=element_text(size=16),axis.title.y=element_text(size=16), legend.position = "right",
+        axis.text.x = element_text(size = 14), axis.text.y = element_text(size =14),
+        panel.background = element_rect(color="black")) +
+  xlab(paste0("PC1 (",percentVar[1],"%)")) +
+  ylab(paste0("PC2 (",percentVar[2],"%)")) 
+
+base_pca
+
+ggsave("RNA-seq PCA_less.pdf", plot = base_pca, height = 4, width = 8)
+ggsave("RNA-seq PCA_less.png", plot = base_pca, height = 4, width = 8, dpi = 600)
+
+```
+
+
+
+```{r heatmap of NE genes}
+generate_NE_hm <- function(heatmap_df){
+  rownames(heatmap_df) <- heatmap_df$gene_name
+  
+  annot_col_df <- as.data.frame(colData(df)[,c("names", "Group")])
+  
+  rownames(annot_col_df) <- annot_col_df$names
+  
+  annot_col_df <- annot_col_df %>% dplyr::select("Group")
+  annot_row_df <- heatmap_df %>% dplyr::select("Differentiation")
+  
+  col_colors <- list(Differentiation = c(NE = "#E9A3C9",
+                                         `Non-NE` = "#F7F7F7",
+                                         `N/A`="#A1D76A"),
+                     Group = c(`Naphthalene (200mg/kg) + 1X HIV-PGK-Cre` = "#27B34B",
+                               `Naphthalene (200mg/kg) + 1X FIV-CMV-Cre` = "#F8766D",
+                               `NT + 1X Ad-CMV-Cre` = "#6F94CD",
+                               `NT + 1X HIV-PGK-Cre` = "#984EA3",
+                               `NT + 1X FIV-CMV-Cre` = "#FF7F00",
+                               `Naphthalene (200mg/kg) + 1X Ad-CMV-Cre` = "#FFFF33"))
+    
+  hm <- pheatmap(as.matrix(heatmap_df[sample_names]), 
+                 color = colorRampPalette(brewer.pal(8, "Oranges"))(255),
+                 cluster_rows = FALSE, 
+                 show_rownames=TRUE, 
+                 cluster_cols = FALSE, 
+                 annotation_row = annot_row_df, 
+                 annotation_col = annot_col_df, 
+                 # annotation_colors = col_colors,
+                 scale = "none")
+  
+  hm
+  
+  return(hm)
+}
+
+
+gene_list <- read.xlsx("Zhang et al 2018 NE and nonNE genes.xlsx")
+
+# # rlog normalized values
+# norm_df <- as.data.frame(assay(normalized_DESeq_df))
+
+# log2(n+1) normalization
+norm_df <- as.data.frame(assay(normTransform(dds)))
+norm_df$gene_id <- rownames(norm_df)
+
+heatmap_df <- left_join(norm_df, final %>% dplyr::select(c("gene_id", "gene_name"))) %>% 
+  left_join(gene_list, .) %>% 
+  filter(!is.na(gene_id))
+
+hm <- generate_NE_hm(heatmap_df)
+
+ggsave("RNA-seq NE heatmap normalized.pdf", plot = hm, height = 10, width = 10)
+ggsave("RNA-seq NE heatmap normalized.png", plot = hm, height = 10, width = 10, dpi = 600)
+
+
+heatmap_df <- left_join(gene_list, final) %>%
+  filter(!is.na(gene_id))
+
+hm <- generate_NE_hm(heatmap_df)
+
+ggsave("RNA-seq NE heatmap.pdf", plot = hm, height = 10, width = 10)
+ggsave("RNA-seq NE heatmap.png", plot = hm, height = 10, width = 10, dpi = 600)
+
+
+```
+
+
+
+```{r heatmap of custom genes}
+generate_custom_hm <- function(heatmap_df){
+  rownames(heatmap_df) <- heatmap_df$gene_name
+  
+  annot_col_df <- as.data.frame(colData(df)[,c("names", "Group")])
+  
+  rownames(annot_col_df) <- annot_col_df$names
+  
+  annot_col_df <- annot_col_df %>% dplyr::select("Group")
+  annot_row_df <- heatmap_df %>% dplyr::select("Marker")
+  
+  col_colors <- list(Marker = c(Subtype = "#FFFF33",
+                                `Myc-family` = "#FF7F00",
+                                Metastasis="#984EA3",
+                                NE = "#E9A3C9",
+                                `Non-NE` = "#F7F7F7"),
+                     Group = c(`Naphthalene (200mg/kg) + 1X HIV-PGK-Cre` = "#E41A1C",
+                               `NT + 1X Ad-CMV-Cre` = "#377EB8",
+                               `Naphthalene (200mg/kg) + 1X FIV-CMV-Cre` = "#4DAF4A",
+                               `NT + 1X HIV-PGK-Cre` = "#984EA3",
+                               `NT + 1X FIV-CMV-Cre` = "#FF7F00",
+                               `Naphthalene (200mg/kg) + 1X Ad-CMV-Cre` = "#FFFF33"))
+    
+  hm <- pheatmap(as.matrix(heatmap_df[sample_names]), 
+                 color = colorRampPalette(brewer.pal(8, "Oranges"))(255),
+                 cluster_rows = FALSE, 
+                 show_rownames=TRUE, 
+                 cluster_cols = FALSE, 
+                 annotation_row = annot_row_df, 
+                 # annotation_col = annot_col_df, 
+                 annotation_colors = col_colors,
+                 scale = "none")
+  
+  return(hm)
+}
+
+gene_list <- read.xlsx("Custom Genes.xlsx")
+
+# # rlog normalized values
+# norm_df <- as.data.frame(assay(normalized_DESeq_df))
+
+# Raw values
+heatmap_df <- left_join(gene_list, final) %>%
+  filter(!is.na(gene_id))
+
+bar_df <- heatmap_df %>% 
+  melt(variable.name = "names") %>% 
+  left_join(as.data.frame(colData(df)[,c("names", "Group")]))
+
+write.xlsx(bar_df, "Custom Gene Normalized Counts All.xlsx")
+
+bar_graph <- ggplot(data = bar_df) +
+  geom_bar(mapping = aes(x = fct_inorder(Human.Symbol), y = value, fill = Group), position = "dodge", stat="identity") +
+  labs(x = NULL, y= "Normalized Counts") +
+  theme_bw()
+
+bar_graph
+
+ggsave("RNA-seq Selected bar graph.pdf", plot = bar_graph, height = 10, width = 10)
+ggsave("RNA-seq Selected bar graph.png", plot = bar_graph, height = 10, width = 10, dpi = 600)
+
+
+# log2(n+1) normalization
+norm_df <- as.data.frame(assay(normTransform(dds)))
+norm_df$gene_id <- rownames(norm_df)
+
+heatmap_df <- left_join(norm_df, final %>% dplyr::select(c("gene_id", "gene_name"))) %>% 
+  left_join(gene_list, .) %>% 
+  filter(!is.na(gene_id))
+
+bar_df <- heatmap_df %>% 
+  melt(variable.name = "names") %>% 
+  left_join(as.data.frame(colData(df)[,c("names", "Group")])) 
+# %>% 
+#   mutate(Group = factor(Group, levels = c("Naphthalene (200mg/kg) + 1X HIV-PGK-Cre","Naphthalene (200mg/kg) + 1X FIV-CMV-Cre", "NT + 1X Ad-CMV-Cre")))
+
+bar_graph <- ggplot(data = bar_df) +
+  geom_bar(mapping = aes(x = fct_inorder(Human.Symbol), y = value, fill = Group), position = "dodge", stat="identity") +
+  labs(x = NULL, y= "log2(TPM + 1)") +
+  theme_bw()
+
+bar_graph
+
+ggsave("RNA-seq Selected bar graph normalized.pdf", plot = bar_graph, height = 10, width = 10)
+ggsave("RNA-seq Selected bar graph normalized.png", plot = bar_graph, height = 10, width = 10, dpi = 600)
+
+# # rlog normalized values
+# norm_df <- as.data.frame(assay(normalized_DESeq_df))
+
+# log2(n+1) normalization
+norm_df <- as.data.frame(assay(normTransform(dds)))
+norm_df$gene_id <- rownames(norm_df)
+
+heatmap_df <- left_join(norm_df, final %>% dplyr::select(c("gene_id", "gene_name"))) %>% 
+  left_join(gene_list, .) %>% 
+  filter(!is.na(gene_id))
+
+hm <- generate_custom_hm(heatmap_df)
+
+ggsave("RNA-seq Selected heatmap normalized.pdf", plot = hm, height = 10, width = 10)
+ggsave("RNA-seq Selected heatmap normalized.png", plot = hm, height = 10, width = 10, dpi = 600)
+
+
+heatmap_df <- left_join(gene_list, final) %>%
+  filter(!is.na(gene_id))
+
+hm <- generate_custom_hm(heatmap_df)
+
+ggsave("RNA-seq Selected heatmap.pdf", plot = hm, height = 10, width = 10)
+ggsave("RNA-seq Selected heatmap.png", plot = hm, height = 10, width = 10, dpi = 600)
+
+
+```
+
+
+
+```{r heatmap of DE genes}
+generate_DE_hm <- function(heatmap_df){
+  rownames(heatmap_df) <- heatmap_df$gene_name
+  
+  annot_col_df <- as.data.frame(colData(df)[,c("names", "Group")])
+  rownames(annot_col_df) <- annot_col_df$names
+  annot_col_df <- annot_col_df %>% dplyr::select("Group")
+  
+  col_colors <- list(Group = c(`Naphthalene (200mg/kg) + 1X HIV-PGK-Cre` = "#E41A1C",
+                               `NT + 1X Ad-CMV-Cre` = "#377EB8",
+                               `Naphthalene (200mg/kg) + 1X FIV-CMV-Cre` = "#4DAF4A",
+                               `NT + 1X HIV-PGK-Cre` = "#984EA3",
+                               `NT + 1X FIV-CMV-Cre` = "#FF7F00",
+                               `Naphthalene (200mg/kg) + 1X Ad-CMV-Cre` = "#FFFF33"))
+  
+  de_hm <- pheatmap(heatmap_df[sample_names], 
+                 color = colorRampPalette(brewer.pal(8, "Oranges"))(255),
+                 cluster_rows = TRUE, 
+                 show_rownames=TRUE, 
+                 cluster_cols = TRUE, 
+                 annotation_col = annot_col_df, 
+                 # annotation_colors = col_colors,
+                 scale = "none")
+  
+  de_hm
+  
+  return(de_hm)
+}
+
+select_heatmap <- as.data.frame(assay(dds)[order(rowMeans(counts(dds,normalized=TRUE)), decreasing=TRUE)[1:20],])
+select_heatmap$gene_id <- rownames(select_heatmap)
+
+# # rlog normalized values
+# norm_df <- as.data.frame(assay(normalized_DESeq_df))
+
+# log2(n+1) normalization
+norm_df <- as.data.frame(assay(normTransform(dds)))
+norm_df$gene_id <- rownames(norm_df)
+
+heatmap_df <- left_join(norm_df, final %>% dplyr::select(c("gene_id", "gene_name"))) %>% 
+  filter(gene_id %in% select_heatmap$gene_id)
+
+hm <- generate_DE_hm(heatmap_df)
+
+ggsave("RNA-seq DE heatmap normalized.pdf", plot = hm, height = 10, width = 10)
+ggsave("RNA-seq DE heatmap normalized.png", plot = hm, height = 10, width = 10, dpi = 600)
+
+heatmap_df <- final %>% 
+  filter(gene_id %in% select_heatmap$gene_id)
+
+hm <- generate_DE_hm(heatmap_df)
+
+ggsave("RNA-seq DE heatmap.pdf", plot = hm, height = 10, width = 10)
+ggsave("RNA-seq DE heatmap.png", plot = hm, height = 10, width = 10, dpi = 600)
+
+
+```
+
+## Secondary method not using tximeta
+
+## Open the quant.sf file and convert ENSMUST symbol to gene names, export to csv
+
+```{r read quant file and convert ID, eval = FALSE}
+
+sample_names <- c("4482861-1", "4482862-1R", "4482862-2R", "4502511-1A", "NL143-LN1", "NL143-LU1", "NL143-LU2", "NL145-LU1", "NL354")
+
+for (sample_name in sample_names){
+  project_dir <- paste0("./quants/", sample_name, "_quant/")
+  
+  # Import and remove the trailing version number (e.g. ENSMUST...0117564.1 to ENSMUST...0117564)
+  df <- read.delim(paste0(project_dir, "quant.sf"), sep = '\t') %>% 
+    mutate(Name = gsub("\\..$", "", Name))
+  
+  
+  ## Following code adapted from https://www.biostars.org/p/496498/
+  mart <- useMart("ensembl","mmusculus_gene_ensembl")
+  ensemble2gene <- getBM(attributes=c("mgi_symbol","ensembl_transcript_id","ensembl_gene_id"),
+                         filters = "ensembl_transcript_id",
+                         values = df$Name, 
+                         mart = mart)
+  ensemble2gene <- ensemble2gene %>% 
+    mutate(Name = ensembl_transcript_id)
+  
+  ensemble2gene$ensembl_transcript_id = NULL
+  
+  df_final <- right_join(ensemble2gene,df, by = "Name")
+  
+  
+  write.csv(df_final, file = paste0("Results/",sample_name, ".csv"), row.names = FALSE)
+}
+
+```
+
+
+
+
+

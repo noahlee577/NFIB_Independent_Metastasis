@@ -1,0 +1,105 @@
+Trimmed_FastQ/1373-lung_R1_001.fastq.gz
+
+Pairs Processed:        0
+Pairs Merged:   0
+Pairs With Adapters:    5774416
+Pairs Discarded:        64728
+CPU Time Used (Minutes):        100.587171
+noahl@MCL-Pro:/mnt/f/Julie NFIB RNA-seq$ bash SeqPrep_Run2.sh
+Trimmed_FastQ/1394-liver_R1_001.fastq.gz
+
+Pairs Processed:        0
+Pairs Merged:   0
+Pairs With Adapters:    7365126
+Pairs Discarded:        72826
+CPU Time Used (Minutes):        113.312459
+noahl@MCL-Pro:/mnt/f/Julie NFIB RNA-seq$ bash SeqPrep_Run2.sh
+Trimmed_FastQ/1394-lung_R1_001.fastq.gz
+
+Pairs Processed:        0
+Pairs Merged:   0
+Pairs With Adapters:    4969437
+Pairs Discarded:        51624
+CPU Time Used (Minutes):        84.057882
+noahl@MCL-Pro:/mnt/f/Julie NFIB RNA-seq$ bash SeqPrep_Run2.sh
+Trimmed_FastQ/1398-liver_R1_001.fastq.gz
+
+Pairs Processed:        0
+Pairs Merged:   0
+Pairs With Adapters:    7157723
+Pairs Discarded:        67822
+CPU Time Used (Minutes):        102.705783
+Trimmed_FastQ/1398-lung_R1_001.fastq.gz
+
+Pairs Processed:        0
+Pairs Merged:   0
+Pairs With Adapters:    5888380
+Pairs Discarded:        91227
+CPU Time Used (Minutes):        82.932599
+Trimmed_FastQ/1399-liver_R1_001.fastq.gz
+
+Pairs Processed:        0
+Pairs Merged:   0
+Pairs With Adapters:    7334659
+Pairs Discarded:        73437
+CPU Time Used (Minutes):        126.159010
+Trimmed_FastQ/1399-lung_R1_001.fastq.gz
+
+Pairs Processed:        0
+Pairs Merged:   0
+Pairs With Adapters:    6955543
+Pairs Discarded:        73405
+Pairs Processed:inutes):0       98.756709
+Pairs Merged:/1508-liver_R1_001.fastq.gz
+Pairs With Adapters:    6744961
+Pairs Discarded:        115085
+CPU Time Used (Minutes):        90.548097
+Trimmed_FastQ/1548-lung_R1_001.fastq.gz
+
+Pairs Processed:        0
+Pairs Merged:   0
+Pairs With Adapters:    6504589
+Pairs Discarded:        71264
+CPU Time Used (Minutes):        128.206487
+Trimmed_FastQ/6843-liver_R1_001.fastq.gz
+
+Pairs Processed:        0
+Pairs Merged:   0
+Pairs With Adapters:    5257926
+Pairs Discarded:        59466
+CPU Time Used (Minutes):        75.630458
+Trimmed_FastQ/6843-lung_R1_001.fastq.gz
+
+Pairs Processed:        0
+Pairs Merged:   0
+Pairs With Adapters:    5684296
+Pairs Discarded:        60638
+CPU Time Used (Minutes):        77.136536
+Trimmed_FastQ/6844-liver_R1_001.fastq.gz
+
+Pairs Processed:        0
+Pairs Merged:   0
+Pairs With Adapters:    5872087
+Pairs Discarded:        59851
+CPU Time Used (Minutes):        83.822619
+Trimmed_FastQ/6844-lung_R1_001.fastq.gz
+
+Pairs Processed:        0
+Pairs Merged:   0
+Pairs With Adapters:    3590401
+Pairs Discarded:        35385
+CPU Time Used (Minutes):        50.674539
+Trimmed_FastQ/997-liver_R1_001.fastq.gz
+
+Pairs Processed:        0
+Pairs Merged:   0
+Pairs With Adapters:    5178948
+Pairs Discarded:        52321
+CPU Time Used (Minutes):        69.803074
+Trimmed_FastQ/997-lung_R1_001.fastq.gz
+
+Pairs Processed:        0
+Pairs Merged:   0
+Pairs With Adapters:    5782788
+Pairs Discarded:        65806
+CPU Time Used (Minutes):        91.901511

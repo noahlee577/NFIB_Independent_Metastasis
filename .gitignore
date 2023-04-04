@@ -1,0 +1,11 @@
+.Rhistory
+
+# Raw Data and other files
+FastQ_Files/
+Trimmed_FastQ/
+mouse_transcripts_index/
+GSEA Results/
+GO Enrichment Tables/
+quants/
+
+*.rnk
