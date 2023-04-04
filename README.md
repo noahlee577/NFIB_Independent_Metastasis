@@ -1,4 +1,4 @@
-Code used to analyze RNA-seq data and generate figures in "NFIB-independent metastasis in SCLC" manuscript
+Code used to analyze RNA-seq data and generate figures in "NFIB-independent metastasis in small cell lung cancer" manuscript
 
 Pipeline:
 
