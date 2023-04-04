@@ -1,6 +1,6 @@
 ---
 title: "RNA-seq_Analysis"
-output: html_document
+output: pdf_document
 ---
 # Will import sf file from Salmon alignment and convert transcript names to gene names
 
