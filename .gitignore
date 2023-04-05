@@ -1,12 +1,16 @@
-.Rhistory
+# Non-code / irrelevant folders
+Drafts/
+Subtype/
 
 # Raw Data and other files
-FastQ_Files/
-Trimmed_FastQ/
-mouse_transcripts_index/
-GSEA Results/
-GO Enrichment Tables/
-quants/
+RNA-seq/FastQ_Files/
+RNA-seq/Trimmed_FastQ/
+RNA-seq/mouse_transcripts_index/
+RNA-seq/GSEA Results/
+RNA-seq/GO Enrichment Tables/
+RNA-seq/quants/
 
+# Other file types
 *.rnk
 *.tex
+*.Rhistory
