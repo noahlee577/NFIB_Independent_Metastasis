@@ -11,3 +11,8 @@ WGS Pipeline:
 2. align_and_remove_duplicates_WGS_BWA.sh: aligned trimmed fastq.gz files to mm39 genome with BWA-MEM and removed read duplicates using Picard's MarkDuplicates
 3. cnvkit_wgs.sh: used cnvkit to generate reference files for downstream analyses
 4. cnvkit_scatter.sh: used cnvkit to generate scatter plots
+
+ATAC-seq pipeline
+
+1. mm10-ATAC.sh: Pipieline for data preprocessing to generate BAM, BW and peak files from raw sequencing data
+2. Diibind_2.rmd : Differential peak analysis using Diffbind
