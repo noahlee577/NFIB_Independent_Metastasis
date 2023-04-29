@@ -1,0 +1,111 @@
+---
+title: "Untitled"
+output: html_document
+date: '2022-06-14'
+---
+
+```{r setup, include=FALSE}
+
+library(GenomicRanges)
+library(DiffBind)
+library(BiocParallel)
+library(rtracklayer)
+library(tibble)
+library(dplyr)
+library(GenomicFeatures)
+library(ChIPseeker)
+BiocParallel::multicoreWorkers()
+
+
+setwd("/labs/julsage/Debbie/Fangfei/ATAC/Peaks/")
+# assuming all .narrowPeak files in the current folder are generated from the clusters
+peaks.names = system("ls | grep narrowPeak", intern=TRUE)
+
+peak.gr.ls = lapply(peaks.names, function(x){peak.df = read.table(x)
+GRanges(peak.df[,1], IRanges(peak.df[,2], peak.df[,3]), peakOrigin=peak.df[,4])})
+all_ATAC_peaks.gr = reduce(Reduce(c, peak.gr.ls))
+summary(all_ATAC_peaks.gr@ranges@width)
+
+write.table(as.data.frame(all_ATAC_peaks.gr), row.names = F, quote = F, col.names = F, sep = "\t", file = "/labs/julsage/Debbie/ATAC/output/all_ATAC_peaks.bed")
+
+all_ATAC_400bp_fixed.gr <- resize(all_ATAC_peaks.gr, width = 400, fix = "center")
+all_ATAC_400bp_fixed.gr <- trim(all_ATAC_400bp_fixed.gr)
+
+write.table(as.data.frame(all_ATAC_400bp_fixed.gr), row.names = F, quote = F, col.names = F, sep = "\t", file = "/labs/julsage/Debbie/Fangfei/ATAC/all_ATAC_400bp_fixed_FQ.bed")
+
+
+setwd("/labs/julsage/Debbie/Fangfei/ATAC/BAM")
+
+experiment <- dba.peakset(peaks = all_ATAC_400bp_fixed.gr, sampID = "FQ_SubQ_1", tissue = "SubQ", factor = "12N1G",condition = "SubQ", treatment = "Allograft", replicate = 1, bamReads = "FQ_SubQ_1_L2_mm10_nodups.bam", peak.caller = "narrowpeak")
+
+experiment <- dba.peakset(experiment,peaks = all_ATAC_400bp_fixed.gr, sampID = "FQ_SubQ_2", tissue = "SubQ", factor = "12N1G",condition = "SubQ", treatment = "Allograft", replicate = 2, bamReads = "FQ_SubQ_2_L2_mm10_nodups.bam", peak.caller = "narrowpeak")
+
+experiment <- dba.peakset(experiment,peaks = all_ATAC_400bp_fixed.gr, sampID = "FQ_SubQ_3", tissue = "SubQ", factor = "12N1G",condition = "SubQ", treatment = "Allograft", replicate = 3, bamReads = "FQ_SubQ_3_L2_mm10_nodups.bam", peak.caller = "narrowpeak")
+
+experiment <- dba.peakset(experiment,peaks = all_ATAC_400bp_fixed.gr, sampID = "FQ_Liver_1", tissue = "Liver", factor = "12N1G",condition = "Liver_Met", treatment = "Allograft", replicate = 1, bamReads = "FQ_Liver_1_L2_mm10_nodups.bam", peak.caller = "narrowpeak")
+
+experiment <- dba.peakset(experiment,peaks = all_ATAC_400bp_fixed.gr, sampID = "FQ_Liver_2", tissue = "Liver", factor = "12N1G",condition = "Liver_Met", treatment = "Allograft", replicate = 2, bamReads = "FQ_Liver_2_L2_mm10_nodups.bam", peak.caller = "narrowpeak")
+
+experiment <- dba.peakset(experiment,peaks = all_ATAC_400bp_fixed.gr, sampID = "FQ_Liver_3", tissue = "Liver", factor = "12N1G",condition = "Liver_Met", treatment = "Allograft", replicate = 3, bamReads = "FQ_Liver_3_L2_mm10_nodups.bam", peak.caller = "narrowpeak")
+
+experiment <- dba.peakset(experiment,peaks = all_ATAC_400bp_fixed.gr, sampID = "FQ_Brain_1", tissue = "Brain", factor = "12N1G",condition = "Brain_Met", treatment = "Allograft", replicate = 1, bamReads = "FQ_Brain_1_L4_mm10_nodups.bam", peak.caller = "narrowpeak")
+
+experiment <- dba.peakset(experiment,peaks = all_ATAC_400bp_fixed.gr, sampID = "FQ_Brain_2", tissue = "Brain", factor = "12N1G",condition = "Brain_Met", treatment = "Allograft", replicate = 2, bamReads = "FQ_Brain_2_L2_mm10_nodups.bam", peak.caller = "narrowpeak")
+
+experiment <- dba.peakset(experiment,peaks = all_ATAC_400bp_fixed.gr, sampID = "FQ_Brain_3", tissue = "Brain", factor = "12N1G",condition = "Brain_Met", treatment = "Allograft", replicate = 3, bamReads = "FQ_Brain_3_L2_mm10_nodups.bam", peak.caller = "narrowpeak")
+
+experiment <- dba.peakset(experiment,peaks = all_ATAC_400bp_fixed.gr, sampID = "FQ_N2_1", tissue = "cells", factor = "12N1G",condition = "In_vitro", treatment = "In_vitro", replicate = 1, bamReads = "FQ_N2_1_L2_mm10_nodups.bam", peak.caller = "narrowpeak")
+
+experiment <- dba.peakset(experiment,peaks = all_ATAC_400bp_fixed.gr, sampID = "FQ_N2_2", tissue = "cells", factor = "12N1G",condition = "In_vitro", treatment = "In_vitro", replicate = 1, bamReads = "FQ_N2_2_L2_mm10_nodups.bam", peak.caller = "narrowpeak")
+
+
+experiment <- dba.count(experiment)
+experiment <- dba.contrast(experiment, categories = DBA_CONDITION)
+dba.plotPCA(experiment, attributes = DBA_CONDITION)
+experiment <- dba.normalize(experiment)
+experiment <- dba.analyze(experiment, method = DBA_ALL_METHODS)
+ plot(experiment)
+
+dba.plotVolcano(dba_experiment_400bp,method = DBA_DESEQ2, bUsePval = TRUE, th = 0.00001, fold=log2(2.5), contrast = 1)
+dba.plotMA(dba_experiment_400bp, method = DBA_DESEQ2, bUsePval = TRUE, th = 0.00001, fold=log2(2.5), contrast = 2)
+saveRDS(experiment, file = "/labs/julsage/Debbie/ATAC/output/dba_experiment_400bp.RDS")
+hmap <- colorRampPalette(c("#FBEF0F", "#660980"))(n = 10)
+dba.plotHeatmap(dba_experiment_400bp, correlations=FALSE, method = DBA_DESEQ2,bUsePval = TRUE, th = 0.0001, ,scale="row",contrast = 1)
+dba.plotHeatmap(dba_experiment_400bp, correlations=FALSE, method = DBA_DESEQ2,bUsePval = TRUE, th = 0.0001, ,scale="row",contrast = 1)
+
+
+WTvsmet <- dba.report(dba_experiment_400bp, method = DBA_DESEQ2, bUsePval = TRUE, th = 0.00001, fold=log2(2.5))
+
+F_privsmet= dba.report(dba_experiment_400bp, method = DBA_DESEQ2, bUsePval = TRUE, th = 0.00001, fold=log2(2.5),contrast = 3)
+F_privsmet = data.frame(F_privsmet)
+
+F_met_high = subset(F_privsmet,F_privsmet$Fold < 0)
+F_pri_high = subset(F_privsmet,F_privsmet$Fold > 0)
+
+write.table(F_met_high, row.names = F, quote = F, col.names = F, sep = "\t", file = "/labs/julsage/Debbie/ATAC/output/analysis/F_met_high.txt")
+write.table(F_pri_high, row.names = F, quote = F, col.names = F, sep = "\t", file = "/labs/julsage/Debbie/ATAC/output/analysis/F_pri_high.txt")
+
+dba.plotVenn(dba_experiment_400bp,  bDB=TRUE,
+ bGain=TRUE, bLoss=TRUE, bAll=TRUE, contrast = 3, bUsePval = TRUE, th = 0.00001)
+
+```
+
+```{bash}
+computeMatrix reference-point -S JHK_12N1G_01_CKDL220006489-1a_HK77TDSX3_toGRCm38_sorted_nodups.bw JHK_1373M1_01_CKDL220006487-1a_HK77TDSX3_toGRCm38_sorted_nodups.bw JHK_1398M1_02_CKDL220006490-1a_HK77TDSX3_toGRCm38_sorted_nodups.bw 
+JHK_1399M4_02_CKDL220006491-1a_HK77TDSX3__toGRCh38_sorted_nodups.bw
+JHK_1399P1_01_CKDL220006493-1a_HK77TDSX3__toGRCh38_sorted_nodups.bw
+JHK_1398P2_01_CKDL220006492-1a_HK77TDSX3__toGRCh38_sorted_nodups.bw
+JHK_N2N1G_01_CKDL220006488-1a_HK77TDSX3__toGRCh38_sorted_nodups.bw -R NFIB_flox_met_specific.bed
+-b 1000 -a 1000 -bs 5 -o NFIB_met_specific.mat.gz  --missingDataAsZero --referencePoint center
+plotHeatmap -m NFIB_met_specific.mat.gz -out NFIB_met_specific.png --colorMap Blues --dpi 600 --heatmapHeight 5
+
+```
+
+
+
+
+
+
+
+
+
